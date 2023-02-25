@@ -10,39 +10,55 @@ const people = [
   new Person(3, "Charlie", 35),
 ];
 
-// endpoint qe kthen te gjithe personat
-app.get("/people", (req, res) => {
-    console.log(res.json(people));
+app.use(express.json());
+
+function validatePerson(req, res, next) {
+    const { name, age } = req.body;
+    if (!name || !age) {
+    return res.status(400).send('Name and age are required');
+    }
+    if (typeof name !== 'string' || typeof age !== 'number') {
+    return res.status(400).send('Name must be a string and age must be a number');
+    }
+    next();
+    }
+
+app.get('/people', (req, res) => {
+  res.json(people);
 });
 
-// endpoint qe kthen personin permes parametrit id
-app.put('/people/:id', (req, res) => {
+app.get('/people/:id', (req, res) => {
   const personId = req.params.id;
   const person = people.find(person => person.id == personId);
   
   if (!person) {
     res.status(404).send('Person not found.');
   } else {
-    const { name, age } = req.body;
-    
-    person.name = name || person.name;
-    person.age = age || person.age;
-    
     res.json(person);
   }
 });
 
-app.post('/people', (req, res) => {
+app.post('/people', validatePerson,(req, res) => {
   const { id, name, age } = req.body;
 
-  if(/\d/.test(name)) {
-    return res.status(400).send('Emri duhet me permbajte vetem shkronja.');
+  if (!name) {
+    res.status(400).send('Name is required.');
+    return;
   }
-  
-  if(age < 0) {
-    return res.status(400).send('Mosha nuk duhet me qene negative.');
+  if (!/^[a-zA-Z]+$/.test(name)) {
+    res.status(400).send('Name must contain only letters.');
+    return;
   }
-  
+
+  if (!age) {
+    res.status(400).send('Age is required.');
+    return;
+  }
+  if (age < 0) {
+    res.status(400).send('Age cannot be negative.');
+    return;
+  }
+
   const person = new Person(id, name, age);
   
   people.push(person);
@@ -50,6 +66,40 @@ app.post('/people', (req, res) => {
   res.json(person);
 });
 
+app.put('/people/:id', (req, res) => {
+  const personId = req.params.id;
+
+  const person = people.find(person => person.id == personId);
+  
+  if (!person) {
+    res.status(404).send('Person not found.');
+  } else {
+    const { name, age } = req.body;
+
+    if (!name) {
+      res.status(400).send('Name is required.');
+      return;
+    }
+    if (!/^[a-zA-Z]+$/.test(name)) {
+      res.status(400).send('Name must contain only letters.');
+      return;
+    }
+    
+    if (!age) {
+      res.status(400).send('Age is required.');
+      return;
+    }
+    if (age < 0) {
+      res.status(400).send('Age cannot be negative.');
+      return;
+    }
+      
+    person.name = name || person.name;
+    person.age = age || person.age;
+    
+    res.json(person);
+  }
+});
 
 app.delete('/people/:id', (req, res) => {
   const personId = req.params.id;
